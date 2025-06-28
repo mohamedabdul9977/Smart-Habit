@@ -1,86 +1,6 @@
 {
   "habits": [
     {
-      "id": "1",
-      "name": "Drink water",
-      "completed": false,
-      "streak": 3,
-      "lastCompleted": "2023-05-20T08:00:00.000Z",
-      "createdAt": "2023-05-15T10:00:00.000Z",
-      "category": "health",
-      "order": 0
-    },
-    {
-      "id": "2",
-      "name": "Exercise",
-      "completed": true,
-      "streak": 5,
-      "lastCompleted": "2023-05-21T09:00:00.000Z",
-      "createdAt": "2023-05-10T08:00:00.000Z",
-      "category": "health",
-      "order": 1
-    },
-    {
-      "id": "3",
-      "name": "Read",
-      "completed": false,
-      "streak": 0,
-      "lastCompleted": null,
-      "createdAt": "2023-05-18T15:00:00.000Z",
-      "category": "personal",
-      "order": 2
-    },
-    {
-      "id": "c33d",
-      "name": "Run",
-      "completed": false,
-      "streak": 0,
-      "lastCompleted": null,
-      "createdAt": "2025-06-28T04:55:10.221Z",
-      "category": "health",
-      "order": 3
-    },
-    {
-      "id": "7002",
-      "name": "Learn something new",
-      "completed": false,
-      "streak": 0,
-      "lastCompleted": null,
-      "createdAt": "2025-06-28T04:58:15.263Z",
-      "category": "personal",
-      "order": 4
-    },
-    {
-      "id": "9716",
-      "name": "Eat a healthy breakfast",
-      "completed": false,
-      "streak": 0,
-      "lastCompleted": null,
-      "createdAt": "2025-06-28T04:58:49.635Z",
-      "category": "health",
-      "order": 5
-    },
-    {
-      "id": "86bf",
-      "name": "Practice gratitude",
-      "completed": false,
-      "streak": 0,
-      "lastCompleted": null,
-      "createdAt": "2025-06-28T04:59:15.221Z",
-      "category": "mindfulness",
-      "order": 6
-    },
-    {
-      "id": "0126",
-      "name": "Sleep before 10PM",
-      "completed": false,
-      "streak": 0,
-      "lastCompleted": null,
-      "createdAt": "2025-06-28T05:00:17.338Z",
-      "category": "mindfulness",
-      "order": 7
-    },
-    {
       "id": "ca6d",
       "name": "Clean your room",
       "completed": false,
@@ -88,7 +8,67 @@
       "lastCompleted": null,
       "createdAt": "2025-06-28T05:00:38.450Z",
       "category": "productivity",
-      "order": 8
+      "order": 0
+    },
+    {
+      "id": "3f7d",
+      "name": "Exercise",
+      "completed": false,
+      "streak": 0,
+      "lastCompleted": null,
+      "createdAt": "2025-06-28T09:19:06.789Z",
+      "category": "health",
+      "order": 1
+    },
+    {
+      "id": "170e",
+      "name": "Swimming",
+      "completed": false,
+      "streak": 0,
+      "lastCompleted": null,
+      "createdAt": "2025-06-28T09:19:19.755Z",
+      "category": "health",
+      "order": 2
+    },
+    {
+      "id": "531d",
+      "name": "Wash my car",
+      "completed": false,
+      "streak": 0,
+      "lastCompleted": null,
+      "createdAt": "2025-06-28T09:19:42.357Z",
+      "category": "productivity",
+      "order": 3
+    },
+    {
+      "id": "3572",
+      "name": "Sleep before 10PM",
+      "completed": false,
+      "streak": 0,
+      "lastCompleted": null,
+      "createdAt": "2025-06-28T09:20:36.369Z",
+      "category": "mindfulness",
+      "order": 4
+    },
+    {
+      "id": "a710",
+      "name": "Read",
+      "completed": false,
+      "streak": 0,
+      "lastCompleted": null,
+      "createdAt": "2025-06-28T09:20:53.494Z",
+      "category": "mindfulness",
+      "order": 5
+    },
+    {
+      "id": "d69e",
+      "name": "Write a book",
+      "completed": false,
+      "streak": 0,
+      "lastCompleted": null,
+      "createdAt": "2025-06-28T09:21:45.391Z",
+      "category": "other",
+      "order": 6
     }
   ]
 }

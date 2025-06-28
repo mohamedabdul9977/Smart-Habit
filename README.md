@@ -1,7 +1,9 @@
 # Smart-Habit
 A Smart Productivity and Habit Tracker
 
-![Project Screenshot](/images/Screenshot%202025-06-28%20080212.png)
+[Demo Video](https://drive.google.com/file/d/1TD5hJAH-1I8v1xVXySO1W0ZAcAurx8Cl/view?usp=sharing)
+
+[Project Screenshot](/images/Screenshot%202025-06-28%20080212.png)
 
 A comprehensive habit tracking application with drag-and-drop functionality, calendar view, daily reminders, and category management.
 

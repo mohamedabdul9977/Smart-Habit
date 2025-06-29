@@ -1,515 +1,668 @@
-document.addEventListener('DOMContentLoaded', function () {
-    // API Configuration
-    const API_URL = 'http://localhost:3000/habits';
+// DOM Elements
+const elements = {
+    habitsList: document.getElementById('habits-list'),
+    addHabitBtn: document.getElementById('add-habit-btn'),
+    addHabitModal: document.getElementById('add-habit-modal'),
+    habitForm: document.getElementById('habit-form'),
+    closeModalButtons: document.querySelectorAll('.close-modal'),
+    views: document.querySelectorAll('.view'),
+    navItems: document.querySelectorAll('nav li'),
+    themeSwitch: document.getElementById('theme-switch'),
+    calendarGrid: document.getElementById('calendar-grid'),
+    currentMonthEl: document.getElementById('current-month'),
+    prevMonthBtn: document.getElementById('prev-month'),
+    nextMonthBtn: document.getElementById('next-month'),
+    addCategoryBtn: document.getElementById('add-category-btn'),
+    addCategoryModal: document.getElementById('add-category-modal'),
+    categoryForm: document.getElementById('category-form'),
+    saveSettingsBtn: document.getElementById('save-settings'),
+    reminderTime: document.getElementById('reminder-time'),
+    statsChart: document.getElementById('stats-chart')
+};
 
-    // DOM Elements
-    const habitForm = document.getElementById('habit-form');
-    const habitInput = document.getElementById('habit-input');
-    const habitCategory = document.getElementById('habit-category');
-    const habitsList = document.getElementById('habits-list');
-    const filterButtons = document.querySelectorAll('.filter-btn');
-    const categoryFilter = document.getElementById('category-filter');
-    const themeBtn = document.getElementById('theme-btn');
-    const viewToggle = document.getElementById('view-toggle');
-    const currentStreakEl = document.getElementById('current-streak');
-    const completionRateEl = document.getElementById('completion-rate');
-    const dailyProgressEl = document.getElementById('daily-progress');
-    const reminderTime = document.getElementById('reminder-time');
-    const setReminderBtn = document.getElementById('set-reminder');
-    const calendarView = document.getElementById('calendar-view');
-    const calendarGrid = document.getElementById('calendar-grid');
-    const currentMonthEl = document.getElementById('current-month');
-    const prevMonthBtn = document.getElementById('prev-month');
-    const nextMonthBtn = document.getElementById('next-month');
+// State
+let state = {
+    habits: [],
+    categories: ['health', 'productivity', 'learning', 'social', 'other'],
+    currentView: 'list',
+    currentDate: new Date(),
+    theme: 'light',
+    settings: {
+        reminderTime: '09:00',
+        reminderDays: [0, 1, 2, 3, 4, 5, 6]
+    }
+};
 
-    // State
-    let habits = [];
-    let currentFilter = 'all';
-    let currentCategoryFilter = 'all';
-    let currentDate = new Date();
-    let currentMonth = currentDate.getMonth();
-    let currentYear = currentDate.getFullYear();
-    let draggedItem = null;
+// Initialize the app
+document.addEventListener('DOMContentLoaded', initApp);
 
-    // Initialize
-    fetchHabits();
-    checkThemePreference();
-    checkReminder();
-    generateCalendar(currentMonth, currentYear);
+// Event Listeners
+elements.addHabitBtn.addEventListener('click', () => toggleModal(elements.addHabitModal));
+elements.habitForm.addEventListener('submit', handleAddHabit);
+elements.closeModalButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        elements.addHabitModal.classList.remove('active');
+        elements.addCategoryModal.classList.remove('active');
 
-    // Event Listeners
-    habitForm.addEventListener('submit', addHabit);
-    filterButtons.forEach(btn => {
-        btn.addEventListener('click', () => filterHabits(btn.dataset.filter));
+        // Reset the form and ensure it uses the default submit handler
+        const newForm = elements.habitForm.cloneNode(true);
+        elements.habitForm.replaceWith(newForm);
+        elements.habitForm = newForm;
+        elements.habitForm.addEventListener('submit', handleAddHabit);
     });
-    categoryFilter.addEventListener('change', (e) => {
-        currentCategoryFilter = e.target.value;
-        renderHabits();
-    });
-    themeBtn.addEventListener('click', toggleTheme);
-    viewToggle.addEventListener('click', toggleView);
-    setReminderBtn.addEventListener('click', setReminder);
-    prevMonthBtn.addEventListener('click', showPreviousMonth);
-    nextMonthBtn.addEventListener('click', showNextMonth);
-
-    // Drag and Drop Event Listeners
-    habitsList.addEventListener('dragstart', handleDragStart);
-    habitsList.addEventListener('dragover', handleDragOver);
-    habitsList.addEventListener('dragleave', handleDragLeave);
-    habitsList.addEventListener('drop', handleDrop);
-    habitsList.addEventListener('dragend', handleDragEnd);
-
-    // API Functions
-    async function fetchHabits() {
-        try {
-            const response = await fetch(API_URL);
-            if (!response.ok) throw new Error('Failed to fetch habits');
-            habits = await response.json();
-            // Sort habits by order if it exists
-            if (habits[0]?.order !== undefined) {
-                habits.sort((a, b) => a.order - b.order);
-            }
-            renderHabits();
-            updateStats();
-        } catch (error) {
-            console.error('Error fetching habits:', error);
-            habitsList.innerHTML = `<p class="error">Error loading habits. Please try again.</p>`;
-        }
-    }
-
-    async function addHabit(e) {
-        e.preventDefault();
-        const habitName = habitInput.value.trim();
-        if (!habitName) return;
-
-        const newHabit = {
-            name: habitName,
-            completed: false,
-            streak: 0,
-            lastCompleted: null,
-            createdAt: new Date().toISOString(),
-            category: habitCategory.value,
-            order: habits.length // Set initial order
-        };
-
-        try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(newHabit)
-            });
-
-            if (!response.ok) throw new Error('Failed to add habit');
-            const createdHabit = await response.json();
-            habits.push(createdHabit);
-            habitInput.value = '';
-            renderHabits();
-            updateStats();
-        } catch (error) {
-            console.error('Error adding habit:', error);
-            alert('Failed to add habit. Please try again.');
-        }
-    }
-
-    async function toggleHabitComplete(e) {
-        const habitId = parseInt(e.target.dataset.id);
-        const habitIndex = habits.findIndex(h => h.id === habitId);
-        if (habitIndex === -1) return;
-
-        const updatedHabit = { ...habits[habitIndex] };
-        updatedHabit.completed = !updatedHabit.completed;
-
-        const today = new Date().toDateString();
-        if (updatedHabit.completed) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-
-            if (!updatedHabit.lastCompleted ||
-                new Date(updatedHabit.lastCompleted).toDateString() === yesterday.toDateString()) {
-                updatedHabit.streak += 1;
-            } else if (new Date(updatedHabit.lastCompleted).toDateString() !== today) {
-                updatedHabit.streak = 1;
-            }
-
-            updatedHabit.lastCompleted = new Date().toISOString();
-        }
-
-        try {
-            const response = await fetch(`${API_URL}/${habitId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(updatedHabit)
-            });
-
-            if (!response.ok) throw new Error('Failed to update habit');
-            habits[habitIndex] = updatedHabit;
-            renderHabits();
-            updateStats();
-            generateCalendar(currentMonth, currentYear); // Update calendar view
-        } catch (error) {
-            console.error('Error updating habit:', error);
-            e.target.checked = !e.target.checked;
-        }
-    }
-
-    async function deleteHabit(e) {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        const habitId = button.dataset.id;
-        if (!habitId) return;
-
-        if (!confirm('Are you sure you want to delete this habit?')) return;
-
-        try {
-            const response = await fetch(`${API_URL}/${habitId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            habits = habits.filter(habit => habit.id !== habitId);
-            renderHabits();
-            updateStats();
-            generateCalendar(currentMonth, currentYear); // Update calendar view
-        } catch (error) {
-            console.error('Delete error:', error);
-            alert('Failed to delete habit. Please check console for details.');
-        }
-    }
-
-    // Drag and Drop Functions
-    function handleDragStart(e) {
-        if (e.target.classList.contains('habit-item')) {
-            draggedItem = e.target;
-            e.target.classList.add('dragging');
-            e.dataTransfer.setData('text/plain', e.target.dataset.id);
-            e.dataTransfer.effectAllowed = 'move';
-        }
-    }
-
-    function handleDragOver(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        
-        const afterElement = getDragAfterElement(habitsList, e.clientY);
-        const currentItem = document.querySelector('.dragging');
-        
-        if (!currentItem) return;
-        
-        if (afterElement == null) {
-            habitsList.appendChild(currentItem);
-        } else {
-            habitsList.insertBefore(currentItem, afterElement);
-        }
-    }
-
-    function handleDragLeave(e) {
-        e.preventDefault();
-        e.target.classList.remove('drag-over');
-    }
-
-    function handleDrop(e) {
-        e.preventDefault();
-        e.target.classList.remove('drag-over');
-    }
-
-    function handleDragEnd(e) {
-        if (e.target.classList.contains('habit-item')) {
-            e.target.classList.remove('dragging');
-            updateHabitOrder();
-        }
-    }
-
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.habit-item:not(.dragging)')];
-        
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    async function updateHabitOrder() {
-        const items = habitsList.querySelectorAll('.habit-item');
-        const newOrder = Array.from(items).map(item => parseInt(item.dataset.id));
-        
-        // Update local habits array order
-        habits.sort((a, b) => {
-            return newOrder.indexOf(a.id) - newOrder.indexOf(b.id);
-        });
-        
-        // Update backend with new order
-        try {
-            const updatePromises = habits.map((habit, index) => {
-                return fetch(`${API_URL}/${habit.id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ order: index })
-                });
-            });
-
-            await Promise.all(updatePromises);
-        } catch (error) {
-            console.error('Error updating habit order:', error);
-        }
-    }
-
-    // UI Functions
-    function renderHabits() {
-        habitsList.innerHTML = '';
-
-        let filteredHabits = habits;
-        if (currentFilter === 'active') {
-            filteredHabits = habits.filter(habit => !habit.completed);
-        } else if (currentFilter === 'completed') {
-            filteredHabits = habits.filter(habit => habit.completed);
-        }
-
-        if (currentCategoryFilter !== 'all') {
-            filteredHabits = filteredHabits.filter(habit => habit.category === currentCategoryFilter);
-        }
-
-        if (filteredHabits.length === 0) {
-            habitsList.innerHTML = '<p class="no-habits">No habits found. Add some!</p>';
-            return;
-        }
-
-        filteredHabits.forEach(habit => {
-            const habitEl = document.createElement('div');
-            habitEl.className = `habit-item ${habit.completed ? 'habit-completed' : ''}`;
-            habitEl.draggable = true;
-            habitEl.dataset.id = habit.id;
-            habitEl.innerHTML = `
-                <div class="habit-info">
-                    <input type="checkbox" class="habit-checkbox" ${habit.completed ? 'checked' : ''} data-id="${habit.id}">
-                    <span class="habit-name">${habit.name}</span>
-                    <span class="habit-category category-${habit.category}">${habit.category}</span>
-                </div>
-                <div class="habit-actions">
-                    <span class="habit-streak">${habit.streak || 0} 🔥</span>
-                    <button class="delete-btn" data-id="${habit.id}"><i class="fas fa-trash"></i></button>
-                </div>
-            `;
-            habitsList.appendChild(habitEl);
-        });
-
-        document.querySelectorAll('.habit-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', toggleHabitComplete);
-        });
-
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', deleteHabit);
-        });
-    }
-
-    function filterHabits(filter) {
-        currentFilter = filter;
-        filterButtons.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.filter === filter);
-        });
-        renderHabits();
-    }
-
-    function updateStats() {
-        if (habits.length === 0) {
-            currentStreakEl.textContent = '0 days';
-            completionRateEl.textContent = '0%';
-            dailyProgressEl.textContent = '0/0';
-            return;
-        }
-
-        const longestStreak = Math.max(...habits.map(habit => habit.streak || 0));
-        currentStreakEl.textContent = `${longestStreak} ${longestStreak === 1 ? 'day' : 'days'}`;
-
-        const completedCount = habits.filter(habit => habit.completed).length;
-        const completionRate = Math.round((completedCount / habits.length) * 100);
-        completionRateEl.textContent = `${completionRate}%`;
-
-        // Daily progress (habits completed today)
-        const today = new Date().toDateString();
-        const todayCompleted = habits.filter(habit => 
-            habit.completed && habit.lastCompleted && new Date(habit.lastCompleted).toDateString() === today
-        ).length;
-        dailyProgressEl.textContent = `${todayCompleted}/${habits.length}`;
-    }
-
-    function toggleTheme() {
-        document.body.classList.toggle('dark-mode');
-        const isDarkMode = document.body.classList.contains('dark-mode');
-        localStorage.setItem('darkMode', isDarkMode);
-
-        const icon = themeBtn.querySelector('i');
-        icon.className = isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
-    }
-
-    function toggleView() {
-        const isCalendarView = calendarView.style.display === 'block';
-        if (isCalendarView) {
-            calendarView.style.display = 'none';
-            habitsList.style.display = 'block';
-            viewToggle.textContent = 'Calendar View';
-        } else {
-            calendarView.style.display = 'block';
-            habitsList.style.display = 'none';
-            viewToggle.textContent = 'List View';
-            generateCalendar(currentMonth, currentYear);
-        }
-    }
-
-    // Calendar Functions
-    function showPreviousMonth() {
-        currentMonth--;
-        if (currentMonth < 0) {
-            currentMonth = 11;
-            currentYear--;
-        }
-        generateCalendar(currentMonth, currentYear);
-    }
-
-    function showNextMonth() {
-        currentMonth++;
-        if (currentMonth > 11) {
-            currentMonth = 0;
-            currentYear++;
-        }
-        generateCalendar(currentMonth, currentYear);
-    }
-
-    function generateCalendar(month, year) {
-        calendarGrid.innerHTML = '';
-        currentMonthEl.textContent = new Date(year, month).toLocaleDateString('en-US', {
-            month: 'long',
-            year: 'numeric'
-        });
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        // Add empty cells for days before the first day of the month
-        for (let i = 0; i < firstDay; i++) {
-            const emptyCell = document.createElement('div');
-            emptyCell.className = 'calendar-day empty';
-            calendarGrid.appendChild(emptyCell);
-        }
-
-        // Add cells for each day of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const dayCell = document.createElement('div');
-            dayCell.className = 'calendar-day';
-            
-            const dayHeader = document.createElement('div');
-            dayHeader.className = 'calendar-day-header';
-            dayHeader.textContent = day;
-            dayCell.appendChild(dayHeader);
-            
-            // Add habits for this day
-            const dateStr = new Date(year, month, day).toISOString().split('T')[0];
-            const dayHabits = habits.filter(habit => 
-                habit.completed && habit.lastCompleted && habit.lastCompleted.split('T')[0] === dateStr
-            );
-            
-            dayHabits.forEach(habit => {
-                const habitEl = document.createElement('div');
-                habitEl.className = 'calendar-habit';
-                habitEl.innerHTML = `
-                    <span class="habit-name">${habit.name}</span>
-                    <span class="habit-category category-${habit.category}">${habit.category}</span>
-                `;
-                dayCell.appendChild(habitEl);
-            });
-            
-            calendarGrid.appendChild(dayCell);
-        }
-    }
-
-    // Reminder Functions
-    function setReminder() {
-        const time = reminderTime.value;
-        if (!time) {
-            alert('Please select a time for your reminder');
-            return;
-        }
-
-        if ('Notification' in window) {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    localStorage.setItem('reminderTime', time);
-                    alert(`Daily reminder set for ${time}`);
-                    scheduleReminder(time);
-                } else {
-                    alert('Please enable notifications for reminders to work');
-                }
-            });
-        } else {
-            alert('Notifications not supported in your browser');
-        }
-    }
-
-    function checkReminder() {
-        const savedTime = localStorage.getItem('reminderTime');
-        if (savedTime) {
-            reminderTime.value = savedTime;
-            scheduleReminder(savedTime);
-        }
-    }
-
-    function scheduleReminder(time) {
-        const [hours, minutes] = time.split(':').map(Number);
-        const now = new Date();
-        const reminderTime = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate(),
-            hours,
-            minutes
-        );
-
-        if (now > reminderTime) {
-            reminderTime.setDate(reminderTime.getDate() + 1);
-        }
-
-        const timeout = reminderTime - now;
-        
-        setTimeout(() => {
-            showReminderNotification();
-            // Schedule the next day's reminder
-            scheduleReminder(time);
-        }, timeout);
-    }
-
-    function showReminderNotification() {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Smart Habit Reminder', {
-                body: 'Time to check your daily habits!',
-                icon: 'path/to/icon.png'
-            });
-        }
-    }
-
-    function checkThemePreference() {
-        const darkMode = localStorage.getItem('darkMode') === 'true';
-        if (darkMode) {
-            document.body.classList.add('dark-mode');
-            const icon = themeBtn.querySelector('i');
-            icon.className = 'fas fa-sun';
-        }
-    }
 });
+
+elements.navItems.forEach(item => {
+    item.addEventListener('click', () => switchView(item.dataset.view));
+});
+elements.themeSwitch.addEventListener('change', toggleTheme);
+elements.prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
+elements.nextMonthBtn.addEventListener('click', () => navigateMonth(1));
+elements.addCategoryBtn.addEventListener('click', () => toggleModal(elements.addCategoryModal));
+elements.categoryForm.addEventListener('submit', handleAddCategory);
+elements.saveSettingsBtn.addEventListener('click', saveSettings);
+
+// Drag and drop setup
+elements.habitsList.addEventListener('dragstart', handleDragStart);
+elements.habitsList.addEventListener('dragover', handleDragOver);
+elements.habitsList.addEventListener('drop', handleDrop);
+
+// Initialize the app
+function initApp() {
+    loadSettings();
+    loadHabits();
+    generateCalendar();
+    setupReminderNotifications();
+    setupChart();
+}
+
+// API Functions
+async function loadHabits() {
+    try {
+        
+        state.habits = [
+            {
+                id: '1',
+                name: 'Drink water',
+                category: 'health',
+                streak: 5,
+                completed: true,
+                createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: '2',
+                name: 'Exercise',
+                category: 'health',
+                streak: 3,
+                completed: false,
+                createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
+            },
+            {
+                id: '3',
+                name: 'Read 30 minutes',
+                category: 'learning',
+                streak: 7,
+                completed: true,
+                createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+            }
+        ];
+        
+        renderHabits();
+        updateStats();
+    } catch (error) {
+        console.error('Error loading habits:', error);
+        showNotification('Failed to load habits', 'error');
+    }
+}
+
+async function fetchHabitsFromAPI() {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/tasks/user`, {
+        headers: {
+            'x-api-user': API_CONFIG.USER_ID,
+            'x-api-key': API_CONFIG.API_KEY,
+            'x-client': API_CONFIG.CLIENT
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error('Failed to fetch habits');
+    }
+    
+    return await response.json();
+}
+
+async function addHabitToAPI(habit) {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/tasks/user`, {
+        method: 'POST',
+        headers: {
+            'x-api-user': API_CONFIG.USER_ID,
+            'x-api-key': API_CONFIG.API_KEY,
+            'x-client': API_CONFIG.CLIENT,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(habit)
+    });
+    
+    if (!response.ok) {
+        throw new Error('Failed to add habit');
+    }
+    
+    return await response.json();
+}
+
+// UI Functions
+function renderHabits() {
+    elements.habitsList.innerHTML = '';
+    
+    if (state.habits.length === 0) {
+        elements.habitsList.innerHTML = '<p class="empty-state">No habits yet. Add your first habit to get started!</p>';
+        return;
+    }
+    
+    state.habits.forEach(habit => {
+        const habitEl = document.createElement('div');
+        habitEl.className = `habit ${habit.completed ? 'completed' : ''}`;
+        habitEl.draggable = true;
+        habitEl.dataset.id = habit.id;
+        
+        habitEl.innerHTML = `
+            <div class="habit-main">
+                <div class="habit-checkbox">
+                    <input type="checkbox" id="habit-${habit.id}" ${habit.completed ? 'checked' : ''}>
+                    <label for="habit-${habit.id}"></label>
+                </div>
+                <div class="habit-info">
+                    <h3>${habit.name}</h3>
+                    <div class="habit-meta">
+                        <span class="category ${habit.category}">
+                            <i class="${getCategoryIcon(habit.category)}"></i>
+                            ${capitalizeFirstLetter(habit.category)}
+                        </span>
+                        <span class="streak">
+                            <i class="fas fa-fire"></i> ${habit.streak} days
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="habit-actions">
+                <button class="btn-icon edit-habit" data-id="${habit.id}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon delete-habit" data-id="${habit.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        elements.habitsList.appendChild(habitEl);
+        
+        // Add event listeners to the new elements
+        const checkbox = habitEl.querySelector(`#habit-${habit.id}`);
+        checkbox.addEventListener('change', () => toggleHabitCompletion(habit.id));
+        
+        const editBtn = habitEl.querySelector('.edit-habit');
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editHabit(habit.id);
+        });
+        
+        const deleteBtn = habitEl.querySelector('.delete-habit');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteHabit(habit.id);
+        });
+    });
+}
+
+function generateCalendar() {
+    const year = state.currentDate.getFullYear();
+    const month = state.currentDate.getMonth();
+    
+    elements.currentMonthEl.textContent = `${new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+    
+    // Get first day of month and total days in month
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Clear previous calendar
+    elements.calendarGrid.innerHTML = '';
+    
+    // Add day headers
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    daysOfWeek.forEach(day => {
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'calendar-day-header';
+        dayHeader.textContent = day;
+        elements.calendarGrid.appendChild(dayHeader);
+    });
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+        const emptyCell = document.createElement('div');
+        emptyCell.className = 'calendar-day empty';
+        elements.calendarGrid.appendChild(emptyCell);
+    }
+    
+    // Add cells for each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+        dayCell.dataset.date = dateStr;
+        
+        dayCell.innerHTML = `
+            <div class="day-number">${day}</div>
+            <div class="day-habits"></div>
+        `;
+        
+        // Add habits for this day
+        const habitsForDay = state.habits.filter(habit => {
+            const habitDate = new Date(habit.createdAt).toISOString().split('T')[0];
+            return habitDate === dateStr;
+        });
+        
+        const habitsContainer = dayCell.querySelector('.day-habits');
+        habitsForDay.forEach(habit => {
+            const habitDot = document.createElement('div');
+            habitDot.className = `habit-dot ${habit.category}`;
+            habitDot.title = habit.name;
+            habitsContainer.appendChild(habitDot);
+        });
+        
+        elements.calendarGrid.appendChild(dayCell);
+    }
+}
+
+function toggleModal(modal) {
+    modal.classList.toggle('active');
+}
+
+function switchView(view) {
+    // Update active nav item
+    elements.navItems.forEach(item => {
+        item.classList.toggle('active', item.dataset.view === view);
+    });
+    
+    // Show the selected view
+    elements.views.forEach(v => {
+        v.classList.toggle('hidden', v.id !== `${view}-view`);
+    });
+    
+    state.currentView = view;
+    
+    // Special handling for certain views
+    if (view === 'calendar') {
+        generateCalendar();
+    } else if (view === 'stats') {
+        updateChart();
+    }
+}
+
+function toggleTheme() {
+    state.theme = state.theme === 'light' ? 'dark' : 'light';
+    document.body.className = `${state.theme}-theme`;
+    saveSettings();
+}
+
+function navigateMonth(change) {
+    state.currentDate = new Date(
+        state.currentDate.getFullYear(),
+        state.currentDate.getMonth() + change,
+        1
+    );
+    generateCalendar();
+}
+
+// Habit CRUD Operations
+function handleAddHabit(e) {
+    e.preventDefault();
+    
+    const name = elements.habitForm.querySelector('#habit-name').value;
+    const category = elements.habitForm.querySelector('#habit-category').value;
+    const goal = elements.habitForm.querySelector('#habit-goal').value;
+    const notes = elements.habitForm.querySelector('#habit-notes').value;
+    
+    const newHabit = {
+        id: Date.now().toString(),
+        name,
+        category,
+        goal,
+        notes,
+        streak: 0,
+        completed: false,
+        createdAt: new Date()
+    };
+    
+    
+    
+    state.habits.push(newHabit);
+    renderHabits();
+    updateStats();
+    
+    // Reset form and close modal
+    elements.habitForm.reset();
+    toggleModal(elements.addHabitModal);
+    
+    showNotification('Habit added successfully!');
+}
+
+function toggleHabitCompletion(habitId) {
+    const habit = state.habits.find(h => h.id === habitId);
+    if (!habit) return;
+    
+    habit.completed = !habit.completed;
+    
+    if (habit.completed) {
+        habit.streak++;
+        showNotification(`Great job! ${habit.name} streak is now ${habit.streak} days.`);
+    } else {
+        habit.streak = Math.max(0, habit.streak - 1);
+    }
+    
+    renderHabits();
+    updateStats();
+}
+
+function editHabit(habitId) {
+    const habit = state.habits.find(h => h.id === habitId);
+    if (!habit) return;
+    
+    // Populate the form with habit data
+    elements.habitForm.querySelector('#habit-name').value = habit.name;
+    elements.habitForm.querySelector('#habit-category').value = habit.category;
+    elements.habitForm.querySelector('#habit-goal').value = habit.goal || '';
+    elements.habitForm.querySelector('#habit-notes').value = habit.notes || '';
+    
+    // Change form to edit mode
+    elements.habitForm.removeEventListener('submit', handleAddHabit);
+    elements.habitForm.addEventListener('submit', (e) => handleUpdateHabit(e, habitId));
+    
+    toggleModal(elements.addHabitModal);
+}
+
+function handleUpdateHabit(e, habitId) {
+    e.preventDefault();
+
+    const habitIndex = state.habits.findIndex(h => h.id === habitId);
+    if (habitIndex === -1) return;
+
+    const name = elements.habitForm.querySelector('#habit-name').value;
+    const category = elements.habitForm.querySelector('#habit-category').value;
+    const goal = elements.habitForm.querySelector('#habit-goal').value;
+    const notes = elements.habitForm.querySelector('#habit-notes').value;
+
+    state.habits[habitIndex] = {
+        ...state.habits[habitIndex],
+        name,
+        category,
+        goal,
+        notes
+    };
+
+    renderHabits();
+    updateStats();
+
+    // Reset form and modal
+    elements.habitForm.reset();
+    toggleModal(elements.addHabitModal);
+
+    // 🛠 Remove all submit event listeners and re-add default one
+    const newForm = elements.habitForm.cloneNode(true);
+    elements.habitForm.replaceWith(newForm);
+    elements.habitForm = newForm; // reassign reference
+    elements.habitForm.addEventListener('submit', handleAddHabit);
+
+    showNotification('Habit updated successfully!');
+}
+
+
+function deleteHabit(habitId) {
+    if (!confirm('Are you sure you want to delete this habit?')) return;
+    
+    
+    
+    state.habits = state.habits.filter(h => h.id !== habitId);
+    renderHabits();
+    updateStats();
+    
+    showNotification('Habit deleted successfully!');
+}
+
+// Category Functions
+function handleAddCategory(e) {
+    e.preventDefault();
+    
+    const name = elements.categoryForm.querySelector('#category-name').value;
+    const icon = elements.categoryForm.querySelector('#category-icon').value;
+    
+    if (state.categories.includes(name.toLowerCase())) {
+        showNotification('Category already exists', 'error');
+        return;
+    }
+    
+    state.categories.push(name.toLowerCase());
+   
+    // Reset form and close modal
+    elements.categoryForm.reset();
+    toggleModal(elements.addCategoryModal);
+    
+    showNotification('Category added successfully!');
+}
+
+function getCategoryIcon(category) {
+    // Default icons for predefined categories
+    const icons = {
+        health: 'fas fa-heartbeat',
+        productivity: 'fas fa-check-circle',
+        learning: 'fas fa-book',
+        social: 'fas fa-users',
+        other: 'fas fa-ellipsis-h'
+    };
+    
+    return icons[category] || 'fas fa-tag';
+}
+
+// Stats Functions
+function updateStats() {
+    if (state.habits.length === 0) {
+        document.getElementById('completion-rate').textContent = '0%';
+        document.getElementById('longest-streak').textContent = '0 days';
+        document.getElementById('habits-count').textContent = '0';
+        return;
+    }
+    
+    // Calculate completion rate
+    const completedCount = state.habits.filter(h => h.completed).length;
+    const completionRate = Math.round((completedCount / state.habits.length) * 100);
+    document.getElementById('completion-rate').textContent = `${completionRate}%`;
+    
+    // Find longest streak
+    const longestStreak = state.habits.reduce((max, habit) => Math.max(max, habit.streak), 0);
+    document.getElementById('longest-streak').textContent = `${longestStreak} days`;
+    
+    // Count habits
+    document.getElementById('habits-count').textContent = state.habits.length;
+    
+    // Update streak counter in sidebar
+    const currentStreak = calculateCurrentStreak();
+    document.querySelector('.streak-days').textContent = `${currentStreak} days`;
+}
+
+function calculateCurrentStreak() {
+    if (state.habits.length === 0) return 0;
+    
+    // This is a simplified calculation - in a real app, you'd track streaks more accurately
+    return state.habits.reduce((sum, habit) => sum + habit.streak, 0) / state.habits.length;
+}
+
+function setupChart() {
+    // Chart will be updated when stats view is shown
+    state.chart = new Chart(elements.statsChart, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Completion Rate',
+                    data: [],
+                    backgroundColor: '#4CAF50'
+                },
+                {
+                    label: 'Streak',
+                    data: [],
+                    backgroundColor: '#FF9800'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+}
+
+function updateChart() {
+    if (!state.chart) return;
+    
+    const habitNames = state.habits.map(h => h.name);
+    const completionRates = state.habits.map(h => h.completed ? 100 : 0);
+    const streaks = state.habits.map(h => h.streak);
+    
+    state.chart.data.labels = habitNames;
+    state.chart.data.datasets[0].data = completionRates;
+    state.chart.data.datasets[1].data = streaks;
+    state.chart.update();
+}
+
+// Settings Functions
+function loadSettings() {
+    const savedSettings = localStorage.getItem('smartHabitSettings');
+    if (savedSettings) {
+        state.settings = JSON.parse(savedSettings);
+        
+        // Apply settings
+        if (state.settings.reminderTime) {
+            elements.reminderTime.value = state.settings.reminderTime;
+        }
+        
+        if (state.settings.reminderDays) {
+            document.querySelectorAll('.days-selector input').forEach(checkbox => {
+                checkbox.checked = state.settings.reminderDays.includes(parseInt(checkbox.value));
+            });
+        }
+        
+        if (state.settings.theme) {
+            state.theme = state.settings.theme;
+            document.body.className = `${state.theme}-theme`;
+            elements.themeSwitch.checked = state.theme === 'dark';
+        }
+    }
+}
+
+function saveSettings() {
+    // Get reminder days
+    const reminderDays = [];
+    document.querySelectorAll('.days-selector input:checked').forEach(checkbox => {
+        reminderDays.push(parseInt(checkbox.value));
+    });
+    
+    state.settings = {
+        reminderTime: elements.reminderTime.value,
+        reminderDays,
+        theme: state.theme
+    };
+    
+    localStorage.setItem('smartHabitSettings', JSON.stringify(state.settings));
+    showNotification('Settings saved successfully!');
+    
+    // Update reminders
+    setupReminderNotifications();
+}
+
+function setupReminderNotifications() {
+    // In a real app, you would use the Notification API or a service worker
+    console.log('Reminders set for:', state.settings.reminderTime, 'on days:', state.settings.reminderDays);
+}
+
+// Drag and Drop Functions
+function handleDragStart(e) {
+    if (!e.target.classList.contains('habit')) return;
+    
+    e.dataTransfer.setData('text/plain', e.target.dataset.id);
+    e.target.classList.add('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    
+    const draggingElement = document.querySelector('.habit.dragging');
+    if (!draggingElement) return;
+    
+    const afterElement = getDragAfterElement(elements.habitsList, e.clientY);
+    if (afterElement) {
+        elements.habitsList.insertBefore(draggingElement, afterElement);
+    } else {
+        elements.habitsList.appendChild(draggingElement);
+    }
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    
+    const habitId = e.dataTransfer.getData('text/plain');
+    const habitEl = document.querySelector(`.habit[data-id="${habitId}"]`);
+    if (!habitEl) return;
+    
+    habitEl.classList.remove('dragging');
+    
+    // In a real app, you would save the new order to your backend
+    const habitIds = Array.from(document.querySelectorAll('.habit')).map(el => el.dataset.id);
+    state.habits.sort((a, b) => habitIds.indexOf(a.id) - habitIds.indexOf(b.id));
+    
+    showNotification('Habits reordered!');
+}
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.habit:not(.dragging)')];
+    
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Helper Functions
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+// Initialize with some demo data if empty
+if (state.habits.length === 0) {
+    loadHabits();
+}

@@ -1,0 +1,13 @@
+# Ignore environment variables
+config.js
+
+
+# Ignore Node modules 
+node_modules/
+
+# Ignore log files
+*.log
+
+# Ignore OS-specific junk files
+.DS_Store
+Thumbs.db

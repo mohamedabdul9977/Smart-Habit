@@ -3,89 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Habit Tracker</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <title>Smart Habit - Your Personal Habit Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./css/style.css">
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Smart Habit</h1>
-            <div class="header-actions">
-                <button id="view-toggle">Calendar View</button>
-                <div class="theme-toggle">
-                    <button id="theme-btn"><i class="fas fa-moon"></i></button>
+<body class="light-theme">
+    <header>
+        <h1>Smart Habit</h1>
+        <div class="theme-toggle">
+            <i class="fas fa-moon"></i>
+            <label class="switch">
+                <input type="checkbox" id="theme-switch">
+                <span class="slider round"></span>
+            </label>
+            <i class="fas fa-sun"></i>
+        </div>
+    </header>
+
+    <main>
+        <section class="sidebar">
+            <div class="user-profile">
+                <div class="avatar" id="user-avatar"></div>
+                <h3 id="username">User</h3>
+            </div>
+            
+            <nav>
+                <ul>
+                    <li class="active" data-view="list"><i class="fas fa-list"></i> List View</li>
+                    <li data-view="calendar"><i class="far fa-calendar-alt"></i> Calendar</li>
+                    <li data-view="stats"><i class="fas fa-chart-line"></i> Statistics</li>
+                    <li data-view="categories"><i class="fas fa-tags"></i> Categories</li>
+                    <li data-view="settings"><i class="fas fa-cog"></i> Settings</li>
+                </ul>
+            </nav>
+            
+            <div class="streak-counter">
+                <h3>Current Streak</h3>
+                <div class="streak-days">0 days</div>
+            </div>
+        </section>
+
+        <section class="main-content">
+            <div class="view" id="list-view">
+                <div class="habits-header">
+                    <h2>Your Habits</h2>
+                    <button id="add-habit-btn" class="btn-primary">
+                        <i class="fas fa-plus"></i> Add Habit
+                    </button>
+                </div>
+                
+                <div class="habits-container" id="habits-list">
+                    <!-- Habits will be added here dynamically -->
                 </div>
             </div>
-        </header>
-
-        <div class="stats-container">
-            <div class="stat-card">
-                <h3>Current Streak</h3>
-                <p id="current-streak">0 days</p>
+            
+            <div class="view hidden" id="calendar-view">
+                <h2>Calendar View</h2>
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
+                        <h3 id="current-month">Month Year</h3>
+                        <button id="next-month"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- Calendar will be generated here -->
+                    </div>
+                </div>
             </div>
-            <div class="stat-card">
-                <h3>Completion Rate</h3>
-                <p id="completion-rate">0%</p>
+            
+            <div class="view hidden" id="stats-view">
+                <h2>Your Statistics</h2>
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3>Completion Rate</h3>
+                        <div class="stat-value" id="completion-rate">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Longest Streak</h3>
+                        <div class="stat-value" id="longest-streak">0 days</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Habits Tracked</h3>
+                        <div class="stat-value" id="habits-count">0</div>
+                    </div>
+                </div>
+                <canvas id="stats-chart"></canvas>
             </div>
-            <div class="stat-card">
-                <h3>Today's Progress</h3>
-                <p id="daily-progress">0/0</p>
+            
+            <div class="view hidden" id="categories-view">
+                <h2>Categories</h2>
+                <div class="categories-container">
+                    <div class="category" data-category="health">
+                        <i class="fas fa-heartbeat"></i>
+                        <span>Health</span>
+                    </div>
+                    <div class="category" data-category="productivity">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Productivity</span>
+                    </div>
+                    <div class="category" data-category="learning">
+                        <i class="fas fa-book"></i>
+                        <span>Learning</span>
+                    </div>
+                    <div class="category" data-category="social">
+                        <i class="fas fa-users"></i>
+                        <span>Social</span>
+                    </div>
+                    <div class="category" data-category="other">
+                        <i class="fas fa-ellipsis-h"></i>
+                        <span>Other</span>
+                    </div>
+                </div>
+                <button id="add-category-btn" class="btn-secondary">
+                    <i class="fas fa-plus"></i> Add Custom Category
+                </button>
             </div>
-        </div>
-
-        <form id="habit-form">
-            <input type="text" id="habit-input" placeholder="Add a new habit..." required>
-            <select id="habit-category">
-                <option value="health">Health</option>
-                <option value="productivity">Productivity</option>
-                <option value="mindfulness">Mindfulness</option>
-                <option value="personal">Personal</option>
-                <option value="other">Other</option>
-            </select>
-            <button type="submit">Add Habit</button>
-        </form>
-
-        <div class="reminder-setup">
-            <h3>Daily Reminder</h3>
-            <input type="time" id="reminder-time">
-            <button id="set-reminder">Set Reminder</button>
-        </div>
-
-        <div class="filter-buttons">
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="active">Active</button>
-            <button class="filter-btn" data-filter="completed">Completed</button>
-            <div class="category-filter">
-                <select id="category-filter">
-                    <option value="all">All Categories</option>
-                    <option value="health">Health</option>
-                    <option value="productivity">Productivity</option>
-                    <option value="mindfulness">Mindfulness</option>
-                    <option value="personal">Personal</option>
-                    <option value="other">Other</option>
-                </select>
+            
+            <div class="view hidden" id="settings-view">
+                <h2>Settings</h2>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="reminder-time">Daily Reminder Time</label>
+                        <input type="time" id="reminder-time" value="09:00">
+                    </div>
+                    <div class="form-group">
+                        <label for="reminder-days">Reminder Days</label>
+                        <div class="days-selector">
+                            <label><input type="checkbox" name="day" value="0" checked> Sun</label>
+                            <label><input type="checkbox" name="day" value="1" checked> Mon</label>
+                            <label><input type="checkbox" name="day" value="2" checked> Tue</label>
+                            <label><input type="checkbox" name="day" value="3" checked> Wed</label>
+                            <label><input type="checkbox" name="day" value="4" checked> Thu</label>
+                            <label><input type="checkbox" name="day" value="5" checked> Fri</label>
+                            <label><input type="checkbox" name="day" value="6" checked> Sat</label>
+                        </div>
+                    </div>
+                    <button id="save-settings" class="btn-primary">Save Settings</button>
+                </div>
             </div>
-        </div>
+        </section>
+    </main>
 
-        <div class="habits-container" id="habits-list">
-            <!-- Habits will be added here dynamically -->
-        </div>
-
-        <div class="calendar-container" id="calendar-view" style="display: none;">
-            <div class="calendar-header">
-                <button id="prev-month"><i class="fas fa-chevron-left"></i></button>
-                <h2 id="current-month">June 2023</h2>
-                <button id="next-month"><i class="fas fa-chevron-right"></i></button>
-            </div>
-            <div class="calendar-grid" id="calendar-grid">
-                <!-- Calendar will be generated here -->
-            </div>
+    <!-- Add Habit Modal -->
+    <div class="modal" id="add-habit-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Add New Habit</h2>
+            <form id="habit-form">
+                <div class="form-group">
+                    <label for="habit-name">Habit Name</label>
+                    <input type="text" id="habit-name" placeholder="e.g., Drink 8 glasses of water" required>
+                </div>
+                <div class="form-group">
+                    <label for="habit-category">Category</label>
+                    <select id="habit-category">
+                        <option value="health">Health</option>
+                        <option value="productivity">Productivity</option>
+                        <option value="learning">Learning</option>
+                        <option value="social">Social</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="habit-goal">Goal (optional)</label>
+                    <input type="text" id="habit-goal" placeholder="e.g., 30 days">
+                </div>
+                <div class="form-group">
+                    <label for="habit-notes">Notes (optional)</label>
+                    <textarea id="habit-notes" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Add Habit</button>
+            </form>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="src/index.js"></script>
+    <!-- Add Category Modal -->
+    <div class="modal" id="add-category-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Add Custom Category</h2>
+            <form id="category-form">
+                <div class="form-group">
+                    <label for="category-name">Category Name</label>
+                    <input type="text" id="category-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="category-icon">Icon</label>
+                    <select id="category-icon">
+                        <option value="fas fa-heartbeat">Health</option>
+                        <option value="fas fa-check-circle">Productivity</option>
+                        <option value="fas fa-book">Learning</option>
+                        <option value="fas fa-users">Social</option>
+                        <option value="fas fa-dumbbell">Fitness</option>
+                        <option value="fas fa-utensils">Food</option>
+                        <option value="fas fa-paint-brush">Creative</option>
+                        <option value="fas fa-coffee">Relaxation</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Add Category</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="src/config.js"></script>
+    <script type="module" src="src/index.js"></script>
 </body>
 </html>
